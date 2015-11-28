@@ -101,6 +101,30 @@ int setupExtdata() {
 	}
 }
 
+u64 getShortcut(char *filename) {
+
+	u64 shortcut = 0xFFFFFFFFFFFFFFFF;
+	
+	char *p1;
+	for (p1=filename; *p1 != '.' && *p1 != '\0'; ++p1) {;}
+	
+	if (*p1 != '.') return shortcut;
+	++p1;
+	
+	char *p2;
+	for (p2=p1; *p2 != '.' && *p2 != '\0'; ++p2) {;}
+	
+	if (*p2 != '.') return shortcut;
+	if (p2-p1 != 8) return shortcut;
+	
+	unsigned int lowpath;
+	
+	if (sscanf(p1, "%08x", &lowpath) != 1) return shortcut;
+	
+	shortcut = 0x0004001000000000 + lowpath;
+	return shortcut;
+}
+
 int writeToExtdata(int nnidNum) {
 	
 	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
@@ -144,6 +168,8 @@ int writeToExtdata(int nnidNum) {
 		for (p=utf16_name; *p != '.' && *p != '\0'; ++p) {;}
 		*p = '\0';
 		
+		u64 shortcut = getShortcut(ent->d_name);
+		
 		ret = pngToRGB565(path, rgb_buf_64x64, alpha_buf_64x64, rgb_buf_32x32, alpha_buf_32x32);
 		if (ret == 0) {
 			for (i=0; i<16; ++i) {
@@ -154,6 +180,13 @@ int writeToExtdata(int nnidNum) {
 			memcpy(badgeDataBuffer + 0xCDCF80 + badge_count*0xA00, rgb_buf_32x32, 32*32*2);
 			memcpy(badgeDataBuffer + 0xCDD780 + badge_count*0xA00, alpha_buf_32x32, 32*32/2);
 			
+			memcpy(badgeMngBuffer + 0x3E8 + badge_count*0x28 + 0xC, &badge_count, 2);
+			badgeMngBuffer[0x3E8 + badge_count*0x28 + 0x12] = 255;
+			badgeMngBuffer[0x3E8 + badge_count*0x28 + 0x13] = 255;
+			
+			memcpy(badgeMngBuffer + 0x3E8 + badge_count*0x28 + 0x18, &shortcut, 8);
+			memcpy(badgeMngBuffer + 0x3E8 + badge_count*0x28 + 0x20, &shortcut, 8);
+		
 			++badge_count;
 		}
 	}
@@ -171,21 +204,8 @@ int writeToExtdata(int nnidNum) {
 	ret = FSFILE_Write(filehandle, &tmpval, 0, badgeDataBuffer, badgeDataSize, FS_WRITE_FLUSH);
 	ret = FSFILE_Close(filehandle);
 	
-	badgeMngBuffer[0x8] = (badge_count >> 0) & 0xFF;
-	badgeMngBuffer[0x9] = (badge_count >> 8) & 0xFF;
-	badgeMngBuffer[0xA] = (badge_count >> 16) & 0xFF;
-	badgeMngBuffer[0xB] = (badge_count >> 24) & 0xFF;
-	badgeMngBuffer[0x1C] = (nnidNum >> 0) & 0xFF;
-	badgeMngBuffer[0x1D] = (nnidNum >> 8) & 0xFF;
-	badgeMngBuffer[0x1E] = (nnidNum >> 16) & 0xFF;
-	badgeMngBuffer[0x1F] = (nnidNum >> 24) & 0xFF;
-	
-	for (i=0; i<badge_count; ++i) {
-		badgeMngBuffer[0x3E8 + i*0x28 + 0xC] = (i >> 0) & 0xFF;
-		badgeMngBuffer[0x3E8 + i*0x28 + 0xD] = (i >> 8) & 0xFF;
-		badgeMngBuffer[0x3E8 + i*0x28 + 0x12] = 255;
-		badgeMngBuffer[0x3E8 + i*0x28 + 0x13] = 255;
-	}
+	memcpy(badgeMngBuffer + 0x8, &badge_count, 4);
+	memcpy(badgeMngBuffer + 0x1C, &nnidNum, 4);
 
 	path = FS_makePath(PATH_CHAR, "/BadgeMngFile.dat");
 	
