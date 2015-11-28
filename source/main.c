@@ -35,21 +35,20 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	
 	int x, y, r, g, b, a;
 	
-	memset(alpha_buf_64x64, 255, 64*64/2);
-	memset(rgb_buf_32x32, 0, 32*32*2);
-	memset(alpha_buf_32x32, 255, 32*32/2);
+	memset(alpha_buf_64x64, 0, 64*64/2);
+	memset(alpha_buf_32x32, 0, 32*32/2);
 	
 	for (y=0; y<64; ++y) {
 		for (x=0; x<64; ++x) {
 			r = image[y*64*4 + x*4] >> 3;
 			g = image[y*64*4 + x*4 + 1] >> 2;
 			b = image[y*64*4 + x*4 + 2] >> 3;
-			a = image[y*64*4 + x*4 + 3] ? 255 : 0;
+			a = image[y*64*4 + x*4 + 3] ? 0xF : 0;
 			
 			int rgb565_index = 8*64*(y/8) | 64*(x/8) | 32*((y/4)%2) | 16*((x/4)%2) | 8*((y/2)%2) | 4*((x/2)%2) | 2*(y%2) | (x%2);
 			
 			rgb_buf_64x64[rgb565_index] = (r << 11) | (g << 5) | b;
-			alpha_buf_64x64[rgb565_index / 2] &= a;
+			alpha_buf_64x64[rgb565_index / 2] |= a << (4*(x%2));
 		}
 	}
 
@@ -58,15 +57,15 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 			r = (image[y*64*4 + x*4 + 0] + image[(y+1)*64*4 + x*4 + 0] + image[y*64*4 + (x+1)*4 + 0] + image[(y+1)*64*4 + (x+1)*4 + 0]) >> 5;
 			g = (image[y*64*4 + x*4 + 1] + image[(y+1)*64*4 + x*4 + 1] + image[y*64*4 + (x+1)*4 + 1] + image[(y+1)*64*4 + (x+1)*4 + 1]) >> 4;
 			b = (image[y*64*4 + x*4 + 2] + image[(y+1)*64*4 + x*4 + 2] + image[y*64*4 + (x+1)*4 + 2] + image[(y+1)*64*4 + (x+1)*4 + 2]) >> 5;
-			a = (image[y*64*4 + x*4 + 3] && image[(y+1)*64*4 + x*4 + 3] && image[y*64*4 + (x+1)*4 + 3] && image[(y+1)*64*4 + (x+1)*4 + 3]) ? 255 : 0;
+			a = (image[y*64*4 + x*4 + 3] && image[(y+1)*64*4 + x*4 + 3] && image[y*64*4 + (x+1)*4 + 3] && image[(y+1)*64*4 + (x+1)*4 + 3]) ? 0xF : 0;
 			
 			int halfx = x/2;
 			int halfy = y/2;
 			
 			int rgb565_index = 4*64*(halfy/8) | 64*(halfx/8) | 32*((halfy/4)%2) | 16*((halfx/4)%2) | 8*((halfy/2)%2) | 4*((halfx/2)%2) | 2*(halfy%2) | (halfx%2);
 			
-			rgb_buf_32x32[rgb565_index] += (r << 11) | (g << 5) | b;
-			alpha_buf_32x32[rgb565_index / 2] &= a;
+			rgb_buf_32x32[rgb565_index] = (r << 11) | (g << 5) | b;
+			alpha_buf_32x32[rgb565_index / 2] |= a << (4*(halfx%2));
 		}
 	}
 	
