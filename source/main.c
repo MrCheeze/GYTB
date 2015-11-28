@@ -43,7 +43,7 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 			r = image[y*64*4 + x*4] >> 3;
 			g = image[y*64*4 + x*4 + 1] >> 2;
 			b = image[y*64*4 + x*4 + 2] >> 3;
-			a = image[y*64*4 + x*4 + 3] ? 0xF : 0;
+			a = image[y*64*4 + x*4 + 3] >> 4;
 			
 			int rgb565_index = 8*64*(y/8) | 64*(x/8) | 32*((y/4)%2) | 16*((x/4)%2) | 8*((y/2)%2) | 4*((x/2)%2) | 2*(y%2) | (x%2);
 			
@@ -57,7 +57,7 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 			r = (image[y*64*4 + x*4 + 0] + image[(y+1)*64*4 + x*4 + 0] + image[y*64*4 + (x+1)*4 + 0] + image[(y+1)*64*4 + (x+1)*4 + 0]) >> 5;
 			g = (image[y*64*4 + x*4 + 1] + image[(y+1)*64*4 + x*4 + 1] + image[y*64*4 + (x+1)*4 + 1] + image[(y+1)*64*4 + (x+1)*4 + 1]) >> 4;
 			b = (image[y*64*4 + x*4 + 2] + image[(y+1)*64*4 + x*4 + 2] + image[y*64*4 + (x+1)*4 + 2] + image[(y+1)*64*4 + (x+1)*4 + 2]) >> 5;
-			a = (image[y*64*4 + x*4 + 3] && image[(y+1)*64*4 + x*4 + 3] && image[y*64*4 + (x+1)*4 + 3] && image[(y+1)*64*4 + (x+1)*4 + 3]) ? 0xF : 0;
+			a = (image[y*64*4 + x*4 + 3] + image[(y+1)*64*4 + x*4 + 3] + image[y*64*4 + (x+1)*4 + 3] + image[(y+1)*64*4 + (x+1)*4 + 3]) >> 6;
 			
 			int halfx = x/2;
 			int halfy = y/2;
