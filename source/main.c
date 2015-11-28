@@ -20,6 +20,16 @@ int print2(char *format, ...)
 	return ret;
 }
 
+void drawPixel(u8* framebuffer, int x, int y, int r, int g, int b) {
+
+	if (x > 0 && x < 400 && y > 0 && y < 240) {
+		int index = 3*((239-y)+x*240);
+		framebuffer[index] = b;
+		framebuffer[index+1] = g;
+		framebuffer[index+2] = r;
+	}
+}
+
 int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rgb_buf_32x32, u8* alpha_buf_32x32) {
 
 	int ret = 0;
@@ -35,8 +45,13 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	
 	int x, y, r, g, b, a;
 	
+	int rand_x = rand() % (400-64);
+	int rand_y = rand() % (240-64);
+	
 	memset(alpha_buf_64x64, 0, 64*64/2);
 	memset(alpha_buf_32x32, 0, 32*32/2);
+	
+	u8* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 	
 	for (y=0; y<64; ++y) {
 		for (x=0; x<64; ++x) {
@@ -49,6 +64,8 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 			
 			rgb_buf_64x64[rgb565_index] = (r << 11) | (g << 5) | b;
 			alpha_buf_64x64[rgb565_index / 2] |= a << (4*(x%2));
+			
+			if (a) drawPixel(framebuffer, rand_x+x, rand_y+y, image[y*64*4 + x*4], image[y*64*4 + x*4 + 1], image[y*64*4 + x*4 + 2]);
 		}
 	}
 
@@ -261,7 +278,9 @@ int writeToExtdata(int nnidNum) {
 int main() {
 
 	gfxInitDefault();
+	gfxSetDoubleBuffering(GFX_TOP, false);
 	consoleInit(GFX_BOTTOM, NULL);
+	srand(time(NULL));
 	Result ret;
 	
 	setupExtdata();
