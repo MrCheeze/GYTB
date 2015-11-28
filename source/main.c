@@ -80,6 +80,27 @@ void charToUnicode(u16* dst, char* src) {
 	*dst='\0';
 }
 
+int setupExtdata() {
+
+	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
+	FS_archive extdata_archive = (FS_archive){ARCH_EXTDATA, (FS_path){PATH_BINARY, 0xC, (u8*)extdata_archive_lowpathdata}};
+	
+	Result ret = FSUSER_OpenArchive(NULL, &extdata_archive);
+	FSUSER_CloseArchive(NULL, &extdata_archive);
+	
+	if (ret==0) {
+		print2("Extdata exists.\n");
+		return 0;
+		
+	} else {
+	
+		print2("Creating ExtSaveData...\n");
+		ret = CreateExtSaveData(0x14d1);
+		print2("CreateExtSaveData? %08x\n", ret);
+		return ret;
+	}
+}
+
 int writeToExtdata(int nnidNum) {
 	
 	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
@@ -189,9 +210,7 @@ int main() {
 	consoleInit(GFX_BOTTOM, NULL);
 	Result ret;
 	
-	print2("Creating ExtSaveData...\n");
-	ret = CreateExtSaveData(0x14d1);
-	print2("CreateExtSaveData? %08x\n", ret);
+	setupExtdata();
 	
     u32 nnidNum = 0;
     ret = actInit();
