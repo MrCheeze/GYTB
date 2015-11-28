@@ -1,0 +1,1 @@
+Result CreateExtSaveData(u32 extdataID);
