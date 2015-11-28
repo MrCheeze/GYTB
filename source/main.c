@@ -75,8 +75,14 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	return ret;
 }
 
-int writeToExtdata(int nnidNum) {
+void charToUnicode(u16* dst, char* src) {
+	if(!src || !dst)return;
+	while(*src)*(dst++)=(*(src++));
+	*dst='\0';
+}
 
+int writeToExtdata(int nnidNum) {
+	
 	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
 	FS_archive extdata_archive = (FS_archive){ARCH_EXTDATA, (FS_path){PATH_BINARY, 0xC, (u8*)extdata_archive_lowpathdata}};
 	Handle filehandle;
@@ -103,20 +109,25 @@ int writeToExtdata(int nnidNum) {
 	if (badgeMngBuffer == NULL) {closedir(dir); free(badgeDataBuffer); return -2;}
 	memset(badgeMngBuffer, 0, badgeMngSize);
 	
-	char str[0x8A] = {'C','\0','u','\0','s','\0','t','\0','o','\0','m','\0',' ','\0','B','\0','a','\0','d','\0','g','\0','e','\0','\0','\0'};
-
 	int badge_count = 0;
 	int i;
 	
-	while ((ent = readdir (dir)) != NULL) {
+	while ((ent = readdir(dir)) != NULL) {
 		print2("trying to read png...\n");
 		char path[0x1000];
 		sprintf(path, "badges/%s", ent->d_name);
 		print2("%s\n", path);
+		
+		u16 utf16_name[0x8A/2];
+		charToUnicode(utf16_name, ent->d_name);
+		u16* p;
+		for (p=utf16_name; *p != '.' && *p != '\0'; ++p) {;}
+		*p = '\0';
+		
 		ret = pngToRGB565(path, rgb_buf_64x64, alpha_buf_64x64, rgb_buf_32x32, alpha_buf_32x32);
 		if (ret == 0) {
 			for (i=0; i<16; ++i) {
-				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + i*0x8A, str, 0x8A);
+				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + i*0x8A, utf16_name, 0x8A);
 			}
 			memcpy(badgeDataBuffer + 0x318F80 + badge_count*0x2800, rgb_buf_64x64, 64*64*2);
 			memcpy(badgeDataBuffer + 0x31AF80 + badge_count*0x2800, alpha_buf_64x64, 64*64/2);
@@ -193,11 +204,19 @@ int main() {
     ret = actExit();
 	print2("actExit? %08x\n", ret);
 
-    printf("Your NNID Number: 0x%08X\n", (int) nnidNum);
+    print2("nnid: %08x\n", (int) nnidNum);
 	
 	ret = writeToExtdata(nnidNum);
-	if (ret == 0xC92044E6) print2("----Please load all badges in your badge case before launching.----\n");
 	print2("wrote to extdata? %08x\n", ret);
+	if (ret == 0xC92044E6) {
+		print2("----File in use. Please load all badges in your badge case before launching.----\n");
+		svcSleepThread(5000000000LL);
+	}
+	else if (ret == 0) {
+		print2("Successfully!\n");
+	} else {
+		print2("WHAT IS WRONG WITH THE ELF\n");
+	}
 	
 	
 	svcSleepThread(5000000000LL);
