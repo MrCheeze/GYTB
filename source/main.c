@@ -114,7 +114,7 @@ int setupExtdata() {
 	
 		print2("Creating ExtSaveData...\n");
 		ret = CreateExtSaveData(0x14d1);
-		print2("CreateExtSaveData? %08x\n", ret);
+		if (ret) print2("CreateExtSaveData failed! %08x\n", ret);
 		return ret;
 	}
 }
@@ -217,15 +217,13 @@ int writeToExtdata(int nnidNum) {
 	}
 	
 	ret = FSUSER_OpenArchive(NULL, &extdata_archive);
-	print2("FSUSER_OpenArchive? %08x\n", ret);
-	if (ret != 0) goto end;
+	if (ret != 0) {print2("FSUSER_OpenArchive failed! %08x\n", ret); goto end;}
 
 	FS_path path = FS_makePath(PATH_CHAR, "/BadgeData.dat");
 	
 	ret = FSUSER_CreateFile(NULL, extdata_archive, path, badgeDataSize);
 	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, path, FS_OPEN_WRITE, 0);
-	print2("FSUSER_OpenFile? %08x\n", ret);
-	if (ret != 0) goto end;
+	if (ret != 0) {print2("FSUSER_OpenFile failed! %08x\n", ret); goto end;}
 	ret = FSFILE_Write(filehandle, &tmpval, 0, badgeDataBuffer, badgeDataSize, FS_WRITE_FLUSH);
 	ret = FSFILE_Close(filehandle);
 	
@@ -264,8 +262,7 @@ int writeToExtdata(int nnidNum) {
 	
 	ret = FSUSER_CreateFile(NULL, extdata_archive, path, badgeMngSize);
 	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, path, FS_OPEN_WRITE, 0);
-	print2("FSUSER_OpenFile? %08x\n", ret);
-	if (ret != 0) goto end;
+	if (ret != 0) {print2("FSUSER_OpenFile failed! %08x\n", ret); goto end;}
 	ret = FSFILE_Write(filehandle, &tmpval, 0, badgeMngBuffer, badgeMngSize, FS_WRITE_FLUSH);
 	ret = FSFILE_Close(filehandle);
 	
@@ -289,18 +286,17 @@ int main() {
 	
     u32 nnidNum = 0;
     ret = actInit();
-	print2("actInit? %08x\n", ret);
     ret = ACTU_Initialize(0xB0002C8, 0, 0);
-	print2("ACTU_Initialize? %08x\n", ret);
     ret = ACTU_GetAccountDataBlock(0xFE, 4, 12, &nnidNum);
-	print2("ACTU_GetAccountDataBlock? %08x\n", ret);
     ret = actExit();
-	print2("actExit? %08x\n", ret);
 
-    print2("nnid: %08x\n", (int) nnidNum);
+	if (nnidNum) {
+		print2("nnid: %08x\n", (int) nnidNum);
+	} else {
+		print2("error, could not detect NNID!");
+	}
 	
 	ret = writeToExtdata(nnidNum);
-	print2("wrote to extdata? %08x\n", ret);
 	if (ret == 0xC92044E6) {
 		print2("----File in use. Please load all badges in your badge case before launching.----\n");
 		svcSleepThread(5000000000LL);
@@ -308,7 +304,7 @@ int main() {
 	else if (ret == 0) {
 		print2("Successfully!\n");
 	} else {
-		print2("WHAT IS WRONG WITH THE ELF\n");
+		print2("WHAT IS WRONG WITH THE ELF. %08x\n", ret);
 	}
 	
 	
