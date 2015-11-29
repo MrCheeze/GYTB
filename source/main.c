@@ -143,6 +143,10 @@ u64 getShortcut(char *filename) {
 	return shortcut;
 }
 
+int compareStrings(const void* a, const void* b ) {
+	return strcmp(a, b);
+}
+
 int writeToExtdata(int nnidNum) {
 	
 	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
@@ -158,41 +162,56 @@ int writeToExtdata(int nnidNum) {
 	u16 rgb_buf_32x32[32*32];
 	u8 alpha_buf_32x32[32*32/2];
 	
+	u8 *badgeDataBuffer = NULL;
+	u8 *badgeMngBuffer = NULL;
+	char *direntries = NULL;
+	
 	DIR *dir;
 	struct dirent *ent;
 	dir = opendir("badges");
-	if (dir == NULL) return -1;
+	if (dir == NULL) {ret = -1; goto end;}
 	
-	u8 *badgeDataBuffer = malloc(badgeDataSize);
-	if (badgeDataBuffer == NULL) {closedir(dir); return -2;}
+	badgeDataBuffer = malloc(badgeDataSize);
+	if (badgeDataBuffer == NULL) {ret = -2; goto end;}
 	memset(badgeDataBuffer, 0, badgeDataSize);
 	
-	u8 *badgeMngBuffer = malloc(badgeMngSize);
-	if (badgeMngBuffer == NULL) {closedir(dir); free(badgeDataBuffer); return -2;}
+	badgeMngBuffer = malloc(badgeMngSize);
+	if (badgeMngBuffer == NULL) {ret = -3; goto end;}
 	memset(badgeMngBuffer, 0, badgeMngSize);
 	
-	int badge_count = 0;
+	direntries = malloc(1002*256);
+	if (direntries == NULL) {ret = -4; goto end;}
+	memset(direntries, 0, 1002*256);
 	int i;
+	for (i=0; ((ent = readdir(dir)) != NULL) && (i<1002); ++i) {
+		strncpy(direntries + i*256, ent->d_name, 255);
+	}
+	int filecount = i;
+	qsort(direntries, filecount, 256, compareStrings);
 	
-	while ((ent = readdir(dir)) != NULL) {
+	int badge_count = 0;
+	
+	for (i=0; i<filecount; ++i) {
+		char *utf8_name = direntries + i*256;
 		print2("trying to read png...\n");
 		char path[0x1000];
-		sprintf(path, "badges/%s", ent->d_name);
+		sprintf(path, "badges/%s", utf8_name);
 		print2("%s\n", path);
 		
 		u16 utf16_name[0x8A/2];
-		ret = ConvertUTF8toUTF16((const UTF8 *) ent->d_name, utf16_name, 0x8A/2);
+		ret = ConvertUTF8toUTF16((const UTF8 *) utf8_name, utf16_name, 0x8A/2);
 		
 		u16* p;
 		for (p=utf16_name; *p != '.' && *p != '\0'; ++p) {;}
 		*p = '\0';
 		
-		u64 shortcut = getShortcut(ent->d_name);
+		u64 shortcut = getShortcut(utf8_name);
 		
 		ret = pngToRGB565(path, rgb_buf_64x64, alpha_buf_64x64, rgb_buf_32x32, alpha_buf_32x32);
 		if (ret == 0) {
-			for (i=0; i<16; ++i) {
-				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + i*0x8A, utf16_name, 0x8A);
+			int j;
+			for (j=0; j<16; ++j) {
+				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + j*0x8A, utf16_name, 0x8A);
 			}
 			memcpy(badgeDataBuffer + 0x318F80 + badge_count*0x2800, rgb_buf_64x64, 64*64*2);
 			memcpy(badgeDataBuffer + 0x31AF80 + badge_count*0x2800, alpha_buf_64x64, 64*64/2);
@@ -270,9 +289,10 @@ int writeToExtdata(int nnidNum) {
 	
 	end:
 	FSUSER_CloseArchive(NULL, &extdata_archive);
-	closedir(dir);
-	free(badgeDataBuffer);
-	free(badgeMngBuffer);
+	if (dir) closedir(dir);
+	if (badgeDataBuffer) free(badgeDataBuffer);
+	if (badgeMngBuffer) free(badgeMngBuffer);
+	if (direntries) free(direntries);
 	return ret;
 }
 
