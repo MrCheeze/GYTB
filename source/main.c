@@ -39,7 +39,7 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	ret = lodepng_decode32_file(&image, &width, &height, filename);
 	if (ret) {print2("error %u: %s\n", ret, lodepng_error_text(ret)); return ret;}
 	
-	if (width != 64 || height != 64) {print2("wrong size, should be 64x64\n"); goto end;}
+	if (width != 64 || height != 64) {print2("wrong size, should be 64x64\n"); ret=-1; goto end;}
 	
 	print2("success!\n");
 	
