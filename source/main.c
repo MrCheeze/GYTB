@@ -8,6 +8,7 @@
 #include "lodepng.h"
 #include "actu.h"
 #include "ext.h"
+#include "ConvertUTF.h"
 
 int print2(char *format, ...)
 {
@@ -180,7 +181,8 @@ int writeToExtdata(int nnidNum) {
 		print2("%s\n", path);
 		
 		u16 utf16_name[0x8A/2];
-		charToUnicode(utf16_name, ent->d_name);
+		ret = ConvertUTF8toUTF16((const UTF8 *) ent->d_name, utf16_name, 0x8A/2);
+		
 		u16* p;
 		for (p=utf16_name; *p != '.' && *p != '\0'; ++p) {;}
 		*p = '\0';
