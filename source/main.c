@@ -216,6 +216,8 @@ int writeToExtdata(int nnidNum) {
 		}
 	}
 	
+	print2("Attempting to write extdata...\n");
+	
 	ret = FSUSER_OpenArchive(NULL, &extdata_archive);
 	if (ret != 0) {print2("FSUSER_OpenArchive failed! %08x\n", ret); goto end;}
 
