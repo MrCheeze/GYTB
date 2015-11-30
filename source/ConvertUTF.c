@@ -220,3 +220,55 @@ ConversionResult ConvertUTF8toUTF16 (const UTF8* source, UTF16* target, int targ
     similarly unrolled loops.
 
    --------------------------------------------------------------------- */
+
+ConversionResult ConvertUTF16toUTF8 (const UTF16* source, UTF8* target, int targetLen) {
+	UTF8* targetEnd = target + targetLen;
+    ConversionResult result = conversionOK;
+    while (*source) {
+        UTF32 ch;
+        unsigned short bytesToWrite = 0;
+        const UTF32 byteMask = 0xBF;
+        const UTF32 byteMark = 0x80; 
+        const UTF16* oldSource = source; /* In case we have to back up because of target overflow. */
+        ch = *source++;
+        /* If we have a surrogate pair, convert to UTF32 first. */
+        if (ch >= UNI_SUR_HIGH_START && ch <= UNI_SUR_HIGH_END) {
+            /* If the 16 bits following the high surrogate are in the source buffer... */
+            if (*source) {
+                UTF32 ch2 = *source;
+                /* If it's a low surrogate, convert to UTF32. */
+                if (ch2 >= UNI_SUR_LOW_START && ch2 <= UNI_SUR_LOW_END) {
+                    ch = ((ch - UNI_SUR_HIGH_START) << halfShift)
+                        + (ch2 - UNI_SUR_LOW_START) + halfBase;
+                    ++source;
+                }
+            } else { /* We don't have the 16 bits following the high surrogate. */
+                --source; /* return to the high surrogate */
+                result = sourceExhausted;
+                break;
+            }
+        }
+        /* Figure out how many bytes the result will require */
+        if (ch < (UTF32)0x80) {      bytesToWrite = 1;
+        } else if (ch < (UTF32)0x800) {     bytesToWrite = 2;
+        } else if (ch < (UTF32)0x10000) {   bytesToWrite = 3;
+        } else if (ch < (UTF32)0x110000) {  bytesToWrite = 4;
+        } else {                            bytesToWrite = 3;
+                                            ch = UNI_REPLACEMENT_CHAR;
+        }
+
+        target += bytesToWrite;
+        if (target > targetEnd) {
+            source = oldSource; /* Back up source pointer! */
+            target -= bytesToWrite; result = targetExhausted; break;
+        }
+        switch (bytesToWrite) { /* note: everything falls through. */
+            case 4: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
+            case 3: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
+            case 2: *--target = (UTF8)((ch | byteMark) & byteMask); ch >>= 6;
+            case 1: *--target =  (UTF8)(ch | firstByteMark[bytesToWrite]);
+        }
+        target += bytesToWrite;
+    }
+    return result;
+}

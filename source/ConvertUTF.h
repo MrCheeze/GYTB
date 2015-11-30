@@ -128,6 +128,7 @@ extern "C" {
 #endif
 
 ConversionResult ConvertUTF8toUTF16 (const UTF8* source, UTF16* target, int targetLen);
+ConversionResult ConvertUTF16toUTF8 (const UTF16* source, UTF8* target, int targetLen);
 
 Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 

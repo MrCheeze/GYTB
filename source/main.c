@@ -103,10 +103,17 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	return ret;
 }
 
-void charToUnicode(u16* dst, char* src) {
-	if(!src || !dst)return;
-	while(*src)*(dst++)=(*(src++));
-	*dst='\0';
+int rgb565ToPng(char* filename, u16* rgb_buf, u8* alpha_buf) {
+
+	u8* image = malloc(64*64*4);
+	if (!image) return -1;
+	
+	memset(image, 255, 64*64*4);
+	
+	lodepng_encode32_file(filename, image, 64, 64);
+	
+	free(image);
+	return 0;
 }
 
 int setupExtdata() {
@@ -156,6 +163,109 @@ u64 getShortcut(char *filename) {
 
 int compareStrings(const void* a, const void* b ) {
 	return strcmp(a, b);
+}
+
+void removeInvalidChars(char *str){
+
+	char *p;
+	for (p=str; *p != '\0'; ++p) {
+		while (*p == '.') {
+			strcpy(p, p+1);
+		}
+	}
+}
+
+int dumpPrexistingBadges() {
+
+	u32 extdata_archive_lowpathdata[3] = {mediatype_SDMC, 0x000014d1, 0};
+	FS_archive extdata_archive = (FS_archive){ARCH_EXTDATA, (FS_path){PATH_BINARY, 0xC, (u8*)extdata_archive_lowpathdata}};
+	FS_path badgeDataPath = FS_makePath(PATH_CHAR, "/BadgeData.dat");
+	FS_path badgeMngPath = FS_makePath(PATH_CHAR, "/BadgeMngFile.dat");
+	
+	int ret = 0;
+	u32 bytesRead;
+	u64 badgeDataSize = 0xF4DF80;
+	u64 badgeMngSize = 0xD4A8;
+	
+	u8 *badgeDataBuffer = NULL;
+	u8 *badgeMngBuffer = NULL;
+	Handle filehandle;
+	
+	badgeDataBuffer = malloc(badgeDataSize);
+	if (badgeDataBuffer == NULL) {ret = -2; goto end;}
+	memset(badgeDataBuffer, 0, badgeDataSize);
+	
+	badgeMngBuffer = malloc(badgeMngSize);
+	if (badgeMngBuffer == NULL) {ret = -3; goto end;}
+	memset(badgeMngBuffer, 0, badgeMngSize);
+	
+	
+	ret = FSUSER_OpenArchive(NULL, &extdata_archive);
+	if (ret) goto end;
+	
+	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, badgeDataPath, FS_OPEN_READ, 0);
+	if (ret) goto end;
+	ret = FSFILE_Read(filehandle, &bytesRead, 0, badgeDataBuffer, badgeDataSize);
+	if (ret) goto end;
+	FSFILE_Close(filehandle);
+	
+	if (bytesRead != badgeDataSize) {ret = -4; goto end;}
+	
+	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, badgeMngPath, FS_OPEN_READ, 0);
+	if (ret) goto end;
+	ret = FSFILE_Read(filehandle, &bytesRead, 0, badgeMngBuffer, badgeMngSize);
+	if (ret) goto end;
+	FSFILE_Close(filehandle);
+	
+	if (bytesRead != badgeMngSize) {ret = -4; goto end;}
+	
+	u32 badgeSetCount;
+	memcpy(&badgeSetCount, badgeDataBuffer + 0x04, 4);
+	if (badgeSetCount == 0) {ret = -1; goto end;}
+	
+	int i;
+	for (i=0; i<1000; ++i) {
+		
+		if (badgeMngBuffer[0x358 + i/8] & (1 << (i%8))) {
+			//badge slot i in use
+			
+			u32 badgeSet;
+			memcpy(&badgeSet, badgeMngBuffer + 0x3E8 + i*0x28 + 0x8, 4);
+			u32 badgeId;
+			memcpy(&badgeId, badgeMngBuffer + 0x3E8 + i*0x28 + 0x4, 4);
+			
+			char filename[512];
+			
+			u32 badgeSetIndex;
+			u32 setId = 0;
+			
+			for (badgeSetIndex = 0; badgeSetIndex < 100; ++badgeSetIndex) {
+				memcpy(&setId, badgeMngBuffer + 0xA028 + badgeSetIndex*0x30 + 0x10, 4);
+				if (setId == badgeSet) break;
+			}
+			if (badgeSetIndex == 100) badgeSetIndex = 0;
+			
+			u16* utf16_name = (u16*) (badgeDataBuffer + badgeSetIndex*16*0x8A);
+			char utf8_name[256] = "";
+			ret = ConvertUTF16toUTF8(utf16_name, (UTF8*) utf8_name, 256);
+			
+			removeInvalidChars(utf8_name);
+			
+			sprintf(filename, "badges/%s.%x.png", utf8_name, (unsigned) badgeId);
+			print2("%s\n", filename);
+			
+			u16* rgb_ptr = (u16*) (badgeDataBuffer + 0x318F80 + i*0x2800);
+			u8* alpha_ptr = badgeDataBuffer + 0x318F80 + i*0x2800 + 0x800;
+			
+			rgb565ToPng(filename, rgb_ptr, alpha_ptr);
+		}
+	}
+	
+	end:
+	FSUSER_CloseArchive(NULL, &extdata_archive);
+	if (badgeDataBuffer) free(badgeDataBuffer);
+	if (badgeMngBuffer) free(badgeDataBuffer);
+	return ret;
 }
 
 int writeToExtdata(int nnidNum) {
@@ -218,7 +328,7 @@ int writeToExtdata(int nnidNum) {
 		sprintf(path, "badges/%s", utf8_name);
 		print2("%s\n", path);
 		
-		u16 utf16_name[0x8A/2];
+		u16 utf16_name[0x8A/2] = {0};
 		ret = ConvertUTF8toUTF16((const UTF8 *) utf8_name, utf16_name, 0x8A/2);
 		
 		u16* p;
@@ -340,9 +450,20 @@ int main() {
 	if (nnidNum) {
 		print2("nnid: %08x\n", (int) nnidNum);
 	} else {
-		print2("error, could not detect NNID!");
+		print2("error, could not detect NNID!\n");
 	}
 	
+	print2("Checking for preexisting Badge Arcade badges to dump...\n");
+	ret = dumpPrexistingBadges();
+	if (ret == 0) {
+		print2("Successfully!\n");
+	} else if (ret == -1) {
+		print2("No official badges to dump.\n");
+	} else {
+		print2("I AM NOT ENOUGH. %08x\n", ret);
+	}
+	
+	/*print2("Writing to extdata...");
 	ret = writeToExtdata(nnidNum);
 	if (ret == 0xC92044E6) {
 		print2("----Badge file in use. Try loading all badges in your badge case and waiting before launching.----\n");
@@ -352,7 +473,7 @@ int main() {
 		print2("Successfully!\n");
 	} else {
 		print2("WHAT IS WRONG WITH THE ELF. %08x\n", ret);
-	}
+	}*/
 	
 	
 	svcSleepThread(5000000000LL);

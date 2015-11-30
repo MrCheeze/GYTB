@@ -58,7 +58,6 @@ the custom_zlib field of the compress and decompress settings*/
 #define LODEPNG_COMPILE_DECODER
 #endif
 /*deflate&zlib encoder and png encoder*/
-#define LODEPNG_NO_COMPILE_ENCODER
 #ifndef LODEPNG_NO_COMPILE_ENCODER
 #define LODEPNG_COMPILE_ENCODER
 #endif
