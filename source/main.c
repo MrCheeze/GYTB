@@ -40,52 +40,63 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	ret = lodepng_decode32_file(&image, &width, &height, filename);
 	if (ret) {print2("error %u: %s\n", ret, lodepng_error_text(ret)); return ret;}
 	
-	if (width != 64 || height != 64) {print2("wrong size, should be 64x64\n"); ret=-1; goto end;}
+	if (width < 64 || height < 64 || width % 64 != 0 || width % 64 != 0 || width > 10*384  || height > 6*384) {
+		print2("Wrong image size, should be 64x64 or a multiple thereof (maximum 640x384). \n");
+		ret = -1;
+		goto end;
+	}
 	
 	print2("success!\n");
 	
 	int x, y, r, g, b, a;
 	
-	int rand_x = rand() % (400-64);
-	int rand_y = rand() % (240-64);
+	int rand_x = rand() % (400-width);
+	int rand_y = rand() % (240-height);
 	
-	memset(alpha_buf_64x64, 0, 64*64/2);
-	memset(alpha_buf_32x32, 0, 32*32/2);
+	memset(alpha_buf_64x64, 0, 10*6*64*64/2);
+	memset(alpha_buf_32x32, 0, 10*6*32*32/2);
 	
 	u8* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 	
-	for (y=0; y<64; ++y) {
-		for (x=0; x<64; ++x) {
-			r = image[y*64*4 + x*4] >> 3;
-			g = image[y*64*4 + x*4 + 1] >> 2;
-			b = image[y*64*4 + x*4 + 2] >> 3;
-			a = image[y*64*4 + x*4 + 3] >> 4;
+	for (y=0; y < height; ++y) {
+		for (x=0; x < width; ++x) {
+			r = image[y*width*4 + x*4] >> 3;
+			g = image[y*width*4 + x*4 + 1] >> 2;
+			b = image[y*width*4 + x*4 + 2] >> 3;
+			a = image[y*width*4 + x*4 + 3] >> 4;
 			
-			int rgb565_index = 8*64*(y/8) | 64*(x/8) | 32*((y/4)%2) | 16*((x/4)%2) | 8*((y/2)%2) | 4*((x/2)%2) | 2*(y%2) | (x%2);
+			int rgb565_index = 8*64*((y/8)%8) | 64*((x/8)%8) | 32*((y/4)%2) | 16*((x/4)%2) | 8*((y/2)%2) | 4*((x/2)%2) | 2*(y%2) | (x%2);
+			
+			//only applicable when more than one badge being created from image
+			rgb565_index |= 64*64*(height/64)*(x/64) + 64*64*(y/64);
 			
 			rgb_buf_64x64[rgb565_index] = (r << 11) | (g << 5) | b;
 			alpha_buf_64x64[rgb565_index / 2] |= a << (4*(x%2));
 			
-			if (a) drawPixel(framebuffer, rand_x+x, rand_y+y, image[y*64*4 + x*4], image[y*64*4 + x*4 + 1], image[y*64*4 + x*4 + 2]);
+			if (a) drawPixel(framebuffer, rand_x+x, rand_y+y, image[y*width*4 + x*4], image[y*width*4 + x*4 + 1], image[y*width*4 + x*4 + 2]);
 		}
 	}
 
-	for (y=0; y<64; y+=2){
-		for (x=0; x<64; x+=2){
-			r = (image[y*64*4 + x*4 + 0] + image[(y+1)*64*4 + x*4 + 0] + image[y*64*4 + (x+1)*4 + 0] + image[(y+1)*64*4 + (x+1)*4 + 0]) >> 5;
-			g = (image[y*64*4 + x*4 + 1] + image[(y+1)*64*4 + x*4 + 1] + image[y*64*4 + (x+1)*4 + 1] + image[(y+1)*64*4 + (x+1)*4 + 1]) >> 4;
-			b = (image[y*64*4 + x*4 + 2] + image[(y+1)*64*4 + x*4 + 2] + image[y*64*4 + (x+1)*4 + 2] + image[(y+1)*64*4 + (x+1)*4 + 2]) >> 5;
-			a = (image[y*64*4 + x*4 + 3] + image[(y+1)*64*4 + x*4 + 3] + image[y*64*4 + (x+1)*4 + 3] + image[(y+1)*64*4 + (x+1)*4 + 3]) >> 6;
+	for (y=0; y < height; y+=2){
+		for (x=0; x < width; x+=2){
+			r = (image[y*width*4 + x*4 + 0] + image[(y+1)*width*4 + x*4 + 0] + image[y*width*4 + (x+1)*4 + 0] + image[(y+1)*width*4 + (x+1)*4 + 0]) >> 5;
+			g = (image[y*width*4 + x*4 + 1] + image[(y+1)*width*4 + x*4 + 1] + image[y*width*4 + (x+1)*4 + 1] + image[(y+1)*width*4 + (x+1)*4 + 1]) >> 4;
+			b = (image[y*width*4 + x*4 + 2] + image[(y+1)*width*4 + x*4 + 2] + image[y*width*4 + (x+1)*4 + 2] + image[(y+1)*width*4 + (x+1)*4 + 2]) >> 5;
+			a = (image[y*width*4 + x*4 + 3] + image[(y+1)*width*4 + x*4 + 3] + image[y*width*4 + (x+1)*4 + 3] + image[(y+1)*width*4 + (x+1)*4 + 3]) >> 6;
 			
 			int halfx = x/2;
 			int halfy = y/2;
 			
-			int rgb565_index = 4*64*(halfy/8) | 64*(halfx/8) | 32*((halfy/4)%2) | 16*((halfx/4)%2) | 8*((halfy/2)%2) | 4*((halfx/2)%2) | 2*(halfy%2) | (halfx%2);
+			int rgb565_index = 4*64*((halfy/8)%4) | 64*((halfx/8)%4) | 32*((halfy/4)%2) | 16*((halfx/4)%2) | 8*((halfy/2)%2) | 4*((halfx/2)%2) | 2*(halfy%2) | (halfx%2);
+			
+			rgb565_index |= 32*32*(height/64)*(x/64) + 32*32*(y/64);
 			
 			rgb_buf_32x32[rgb565_index] = (r << 11) | (g << 5) | b;
 			alpha_buf_32x32[rgb565_index / 2] |= a << (4*(halfx%2));
 		}
 	}
+	
+	ret = (height/64)*(width/64); //number of badges in buffer
 	
 	end:
 	free(image);
@@ -157,14 +168,14 @@ int writeToExtdata(int nnidNum) {
 	u64 badgeMngSize = 0xD4A8;
 	Result ret = 0;
 	
-	u16 rgb_buf_64x64[64*64];
-	u8 alpha_buf_64x64[64*64/2];
-	u16 rgb_buf_32x32[32*32];
-	u8 alpha_buf_32x32[32*32/2];
-	
 	u8 *badgeDataBuffer = NULL;
 	u8 *badgeMngBuffer = NULL;
 	char *direntries = NULL;
+	
+	u16 *rgb_buf_64x64 = NULL;
+	u8 *alpha_buf_64x64 = NULL;
+	u16 *rgb_buf_32x32 = NULL;
+	u8 *alpha_buf_32x32 = NULL;
 	
 	DIR *dir;
 	struct dirent *ent;
@@ -188,6 +199,15 @@ int writeToExtdata(int nnidNum) {
 	}
 	int filecount = i;
 	qsort(direntries, filecount, 256, compareStrings);
+
+	rgb_buf_64x64 = malloc(10*6*64*64*2);
+	if (!rgb_buf_64x64) {ret = -5; goto end;}
+	alpha_buf_64x64 = malloc(10*6*64*64/2);
+	if (!rgb_buf_64x64) {ret = -6; goto end;}
+	rgb_buf_32x32 = malloc(10*6*32*32*2);
+	if (!rgb_buf_64x64) {ret = -7; goto end;}
+	alpha_buf_32x32 = malloc(10*6*32*32/2);
+	if (!rgb_buf_64x64) {ret = -8; goto end;}
 	
 	int badge_count = 0;
 	
@@ -207,16 +227,17 @@ int writeToExtdata(int nnidNum) {
 		
 		u64 shortcut = getShortcut(utf8_name);
 		
-		ret = pngToRGB565(path, rgb_buf_64x64, alpha_buf_64x64, rgb_buf_32x32, alpha_buf_32x32);
-		if (ret == 0) {
-			int j;
-			for (j=0; j<16; ++j) {
-				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + j*0x8A, utf16_name, 0x8A);
+		int badges_in_image = pngToRGB565(path, rgb_buf_64x64, alpha_buf_64x64, rgb_buf_32x32, alpha_buf_32x32);
+		int j;
+		for (j=0; j<badges_in_image; ++j) {
+			int k;
+			for (k=0; k<16; ++k) {
+				memcpy(badgeDataBuffer + 0x35E80 + badge_count*16*0x8A + k*0x8A, utf16_name, 0x8A);
 			}
-			memcpy(badgeDataBuffer + 0x318F80 + badge_count*0x2800, rgb_buf_64x64, 64*64*2);
-			memcpy(badgeDataBuffer + 0x31AF80 + badge_count*0x2800, alpha_buf_64x64, 64*64/2);
-			memcpy(badgeDataBuffer + 0xCDCF80 + badge_count*0xA00, rgb_buf_32x32, 32*32*2);
-			memcpy(badgeDataBuffer + 0xCDD780 + badge_count*0xA00, alpha_buf_32x32, 32*32/2);
+			memcpy(badgeDataBuffer + 0x318F80 + badge_count*0x2800, rgb_buf_64x64 + j*64*64, 64*64*2);
+			memcpy(badgeDataBuffer + 0x31AF80 + badge_count*0x2800, alpha_buf_64x64 + j*64*64/2, 64*64/2);
+			memcpy(badgeDataBuffer + 0xCDCF80 + badge_count*0xA00, rgb_buf_32x32 + j*32*32, 32*32*2);
+			memcpy(badgeDataBuffer + 0xCDD780 + badge_count*0xA00, alpha_buf_32x32 + j*32*32/2, 32*32/2);
 			
 			int badge_id = badge_count+1;
 			memcpy(badgeMngBuffer + 0x3E8 + badge_count*0x28 + 0x4, &badge_id, 4);
@@ -289,6 +310,10 @@ int writeToExtdata(int nnidNum) {
 	
 	end:
 	FSUSER_CloseArchive(NULL, &extdata_archive);
+	if (rgb_buf_64x64) free(rgb_buf_64x64);
+	if (alpha_buf_64x64) free(alpha_buf_64x64);
+	if (rgb_buf_32x32) free(rgb_buf_32x32);
+	if (alpha_buf_32x32) free(alpha_buf_32x32);
 	if (dir) closedir(dir);
 	if (badgeDataBuffer) free(badgeDataBuffer);
 	if (badgeMngBuffer) free(badgeMngBuffer);
@@ -320,7 +345,7 @@ int main() {
 	
 	ret = writeToExtdata(nnidNum);
 	if (ret == 0xC92044E6) {
-		print2("----File in use. Please load all badges in your badge case before launching.----\n");
+		print2("----Badge file in use. Try loading all badges in your badge case and waiting before launching.----\n");
 		svcSleepThread(5000000000LL);
 	}
 	else if (ret == 0) {
