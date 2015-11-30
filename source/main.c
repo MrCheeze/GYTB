@@ -40,8 +40,8 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	ret = lodepng_decode32_file(&image, &width, &height, filename);
 	if (ret) {print2("error %u: %s\n", ret, lodepng_error_text(ret)); return ret;}
 	
-	if (width < 64 || height < 64 || width % 64 != 0 || width % 64 != 0 || width > 10*384  || height > 6*384) {
-		print2("Wrong image size, should be 64x64 or a multiple thereof (maximum 640x384). \n");
+	if (width < 64 || height < 64 || width % 64 != 0 || width % 64 != 0 || width > 12*384  || height > 6*384) {
+		print2("Wrong image size, should be 64x64 or a multiple thereof (maximum 768x384). \n");
 		ret = -1;
 		goto end;
 	}
@@ -53,8 +53,8 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	int rand_x = rand() % (400-width);
 	int rand_y = rand() % (240-height);
 	
-	memset(alpha_buf_64x64, 0, 10*6*64*64/2);
-	memset(alpha_buf_32x32, 0, 10*6*32*32/2);
+	memset(alpha_buf_64x64, 0, 12*6*64*64/2);
+	memset(alpha_buf_32x32, 0, 12*6*32*32/2);
 	
 	u8* framebuffer = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
 	
@@ -200,13 +200,13 @@ int writeToExtdata(int nnidNum) {
 	int filecount = i;
 	qsort(direntries, filecount, 256, compareStrings);
 
-	rgb_buf_64x64 = malloc(10*6*64*64*2);
+	rgb_buf_64x64 = malloc(12*6*64*64*2);
 	if (!rgb_buf_64x64) {ret = -5; goto end;}
-	alpha_buf_64x64 = malloc(10*6*64*64/2);
+	alpha_buf_64x64 = malloc(12*6*64*64/2);
 	if (!rgb_buf_64x64) {ret = -6; goto end;}
-	rgb_buf_32x32 = malloc(10*6*32*32*2);
+	rgb_buf_32x32 = malloc(12*6*32*32*2);
 	if (!rgb_buf_64x64) {ret = -7; goto end;}
-	alpha_buf_32x32 = malloc(10*6*32*32/2);
+	alpha_buf_32x32 = malloc(12*6*32*32/2);
 	if (!rgb_buf_64x64) {ret = -8; goto end;}
 	
 	int badge_count = 0;
