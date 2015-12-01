@@ -3,6 +3,7 @@
 #include <3ds.h>
 #include <stdarg.h>
 #include <dirent.h>
+#include <math.h>
 
 
 #include "lodepng.h"
@@ -60,7 +61,7 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	
 	for (y=0; y < height; ++y) {
 		for (x=0; x < width; ++x) {
-			r = image[y*width*4 + x*4] >> 3;
+			r = image[y*width*4 + x*4 + 0] >> 3;
 			g = image[y*width*4 + x*4 + 1] >> 2;
 			b = image[y*width*4 + x*4 + 2] >> 3;
 			a = image[y*width*4 + x*4 + 3] >> 4;
@@ -108,12 +109,34 @@ int rgb565ToPng(char* filename, u16* rgb_buf, u8* alpha_buf) {
 	u8* image = malloc(64*64*4);
 	if (!image) return -1;
 	
-	memset(image, 255, 64*64*4);
+	int i, x, y, r, g, b, a;
 	
-	lodepng_encode32_file(filename, image, 64, 64);
+	for (i=0; i < 64*64; ++i) {
+	
+		r = (rgb_buf[i] & 0xF800) >> 11;
+		g = (rgb_buf[i] & 0x07E0) >> 5;
+		b = (rgb_buf[i] & 0x001F);
+		a = (alpha_buf[i/2] >> (4*(i%2))) & 0x0F;
+		
+		r = round(r * 255.0 / 31.0);
+		g = round(g * 255.0 / 63.0);
+		b = round(b * 255.0 / 31.0);
+		a = a * 0x11;
+		
+		x = 8*((i/64)%8) + (((i%64)&0x01) >> 0) + (((i%64)&0x04) >> 1) + (((i%64)&0x10) >> 2);
+		y = 8*(i/512) + (((i%64)&0x02) >> 1) + (((i%64)&0x08) >> 2) + (((i%64)&0x20) >> 3);
+		
+		image[y*64*4 + x*4 + 0] = r;
+		image[y*64*4 + x*4 + 1] = g;
+		image[y*64*4 + x*4 + 2] = b;
+		image[y*64*4 + x*4 + 3] = a;
+	}
+	
+	Result ret = lodepng_encode32_file(filename, image, 64, 64);
+	if (ret) print2("error %u: %s\n", ret, lodepng_error_text(ret));
 	
 	free(image);
-	return 0;
+	return ret;
 }
 
 int setupExtdata() {
@@ -169,8 +192,8 @@ void removeInvalidChars(char *str){
 
 	char *p;
 	for (p=str; *p != '\0'; ++p) {
-		while (*p == '.') {
-			strcpy(p, p+1);
+		if (*p == '.' || (*p > 0 && *p < 0x20) || *p == ':') {
+			*p = ' ';
 		}
 	}
 }
@@ -192,11 +215,11 @@ int dumpPrexistingBadges() {
 	Handle filehandle;
 	
 	badgeDataBuffer = malloc(badgeDataSize);
-	if (badgeDataBuffer == NULL) {ret = -2; goto end;}
+	if (badgeDataBuffer == NULL) {print2("Out of memory!\n"); ret = -2; goto end;}
 	memset(badgeDataBuffer, 0, badgeDataSize);
 	
 	badgeMngBuffer = malloc(badgeMngSize);
-	if (badgeMngBuffer == NULL) {ret = -3; goto end;}
+	if (badgeMngBuffer == NULL) {print2("Out of memory!\n"); ret = -3; goto end;}
 	memset(badgeMngBuffer, 0, badgeMngSize);
 	
 	
@@ -229,42 +252,40 @@ int dumpPrexistingBadges() {
 		if (badgeMngBuffer[0x358 + i/8] & (1 << (i%8))) {
 			//badge slot i in use
 			
-			u32 badgeSet;
-			memcpy(&badgeSet, badgeMngBuffer + 0x3E8 + i*0x28 + 0x8, 4);
 			u32 badgeId;
 			memcpy(&badgeId, badgeMngBuffer + 0x3E8 + i*0x28 + 0x4, 4);
+			u16 badgeSubId;
+			memcpy(&badgeSubId, badgeMngBuffer + 0x3E8 + i*0x28 + 0xE, 2);
+			u32 shortcut;
+			memcpy(&shortcut, badgeMngBuffer + 0x3E8 + i*0x28 + 0x18, 4);
 			
 			char filename[512];
 			
-			u32 badgeSetIndex;
-			u32 setId = 0;
-			
-			for (badgeSetIndex = 0; badgeSetIndex < 100; ++badgeSetIndex) {
-				memcpy(&setId, badgeMngBuffer + 0xA028 + badgeSetIndex*0x30 + 0x10, 4);
-				if (setId == badgeSet) break;
-			}
-			if (badgeSetIndex == 100) badgeSetIndex = 0;
-			
-			u16* utf16_name = (u16*) (badgeDataBuffer + badgeSetIndex*16*0x8A);
+			u16* utf16_name = (u16*) (badgeDataBuffer + 0x35E80 + i*16*0x8A);
 			char utf8_name[256] = "";
 			ret = ConvertUTF16toUTF8(utf16_name, (UTF8*) utf8_name, 256);
 			
 			removeInvalidChars(utf8_name);
 			
-			sprintf(filename, "badges/%s.%x.png", utf8_name, (unsigned) badgeId);
+			if (shortcut == 0xFFFFFFFF) {
+				sprintf(filename, "badges/%s.%x.%x.png", utf8_name, (unsigned) badgeId, (unsigned) badgeSubId);
+			} else {
+				sprintf(filename, "badges/%s.%08x.%x.%x.png", utf8_name, (unsigned) shortcut, (unsigned) badgeId, (unsigned) badgeSubId);
+			}
 			print2("%s\n", filename);
 			
 			u16* rgb_ptr = (u16*) (badgeDataBuffer + 0x318F80 + i*0x2800);
-			u8* alpha_ptr = badgeDataBuffer + 0x318F80 + i*0x2800 + 0x800;
+			u8* alpha_ptr = badgeDataBuffer + 0x31AF80 + i*0x2800;
 			
-			rgb565ToPng(filename, rgb_ptr, alpha_ptr);
+			ret = rgb565ToPng(filename, rgb_ptr, alpha_ptr);
+			if (ret) print2("rgb565ToPng? %08x\n", ret);
 		}
 	}
 	
 	end:
 	FSUSER_CloseArchive(NULL, &extdata_archive);
 	if (badgeDataBuffer) free(badgeDataBuffer);
-	if (badgeMngBuffer) free(badgeDataBuffer);
+	if (badgeMngBuffer) free(badgeMngBuffer);
 	return ret;
 }
 
@@ -290,18 +311,18 @@ int writeToExtdata(int nnidNum) {
 	DIR *dir;
 	struct dirent *ent;
 	dir = opendir("badges");
-	if (dir == NULL) {ret = -1; goto end;}
+	if (dir == NULL) {print2("badges folder is missing.\n"); ret = -1; goto end;}
 	
 	badgeDataBuffer = malloc(badgeDataSize);
-	if (badgeDataBuffer == NULL) {ret = -2; goto end;}
+	if (badgeDataBuffer == NULL) {print2("Out of memory!\n"); ret = -2; goto end;}
 	memset(badgeDataBuffer, 0, badgeDataSize);
 	
 	badgeMngBuffer = malloc(badgeMngSize);
-	if (badgeMngBuffer == NULL) {ret = -3; goto end;}
+	if (badgeMngBuffer == NULL) {print2("Out of memory!\n"); ret = -3; goto end;}
 	memset(badgeMngBuffer, 0, badgeMngSize);
 	
 	direntries = malloc(1002*256);
-	if (direntries == NULL) {ret = -4; goto end;}
+	if (direntries == NULL) {print2("Out of memory!\n"); ret = -4; goto end;}
 	memset(direntries, 0, 1002*256);
 	int i;
 	for (i=0; ((ent = readdir(dir)) != NULL) && (i<1002); ++i) {
@@ -311,13 +332,13 @@ int writeToExtdata(int nnidNum) {
 	qsort(direntries, filecount, 256, compareStrings);
 
 	rgb_buf_64x64 = malloc(12*6*64*64*2);
-	if (!rgb_buf_64x64) {ret = -5; goto end;}
+	if (!rgb_buf_64x64) {print2("Out of memory!\n"); ret = -5; goto end;}
 	alpha_buf_64x64 = malloc(12*6*64*64/2);
-	if (!rgb_buf_64x64) {ret = -6; goto end;}
+	if (!rgb_buf_64x64) {print2("Out of memory!\n"); ret = -6; goto end;}
 	rgb_buf_32x32 = malloc(12*6*32*32*2);
-	if (!rgb_buf_64x64) {ret = -7; goto end;}
+	if (!rgb_buf_64x64) {print2("Out of memory!\n"); ret = -7; goto end;}
 	alpha_buf_32x32 = malloc(12*6*32*32/2);
-	if (!rgb_buf_64x64) {ret = -8; goto end;}
+	if (!rgb_buf_64x64) {print2("Out of memory!\n"); ret = -8; goto end;}
 	
 	int badge_count = 0;
 	
@@ -328,7 +349,7 @@ int writeToExtdata(int nnidNum) {
 		sprintf(path, "badges/%s", utf8_name);
 		print2("%s\n", path);
 		
-		u16 utf16_name[0x8A/2] = {0};
+		u16 utf16_name[0x8A/2];
 		ret = ConvertUTF8toUTF16((const UTF8 *) utf8_name, utf16_name, 0x8A/2);
 		
 		u16* p;
@@ -451,6 +472,7 @@ int main() {
 		print2("nnid: %08x\n", (int) nnidNum);
 	} else {
 		print2("error, could not detect NNID!\n");
+		goto end;
 	}
 	
 	print2("Checking for preexisting Badge Arcade badges to dump...\n");
@@ -459,23 +481,30 @@ int main() {
 		print2("Successfully!\n");
 	} else if (ret == -1) {
 		print2("No official badges to dump.\n");
+	} else if (ret == 0xC92044E6) {
+		print2("-------------------------------------\nBadge file in use. Try loading all\nbadges in your badge case and waiting\nbefore launching.\n-------------------------------------\n");
+		svcSleepThread(7000000000LL);
+		goto end;
 	} else {
 		print2("I AM NOT ENOUGH. %08x\n", ret);
+		goto end;
 	}
 	
-	/*print2("Writing to extdata...");
+	print2("Writing to extdata...");
 	ret = writeToExtdata(nnidNum);
 	if (ret == 0xC92044E6) {
-		print2("----Badge file in use. Try loading all badges in your badge case and waiting before launching.----\n");
-		svcSleepThread(5000000000LL);
-	}
-	else if (ret == 0) {
+		print2("-------------------------------------\nBadge file in use. Try loading all\nbadges in your badge case and waiting\nbefore launching.\n-------------------------------------\n");
+		svcSleepThread(7000000000LL);
+		goto end;
+	} else if (ret == 0) {
 		print2("Successfully!\n");
 	} else {
 		print2("WHAT IS WRONG WITH THE ELF. %08x\n", ret);
-	}*/
+		goto end;
+	}
 	
 	
+	end:
 	svcSleepThread(5000000000LL);
 
 	gfxExit();
