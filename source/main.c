@@ -486,7 +486,8 @@ int main() {
 		svcSleepThread(7000000000LL);
 		goto end;
 	} else {
-		print2("I AM NOT ENOUGH. %08x\n", ret);
+		print2("WHAT IS WRONG WITH THE ELF. %08x\n", ret);
+		svcSleepThread(6000000000LL);
 		goto end;
 	}
 	
@@ -500,6 +501,7 @@ int main() {
 		print2("Successfully!\n");
 	} else {
 		print2("WHAT IS WRONG WITH THE ELF. %08x\n", ret);
+		svcSleepThread(6000000000LL);
 		goto end;
 	}
 	
