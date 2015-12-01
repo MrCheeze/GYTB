@@ -7,4 +7,4 @@ The custom badge's name is set to whatever the filename of the badge originally 
 
 As of the latest update, official badges from the Badge Arcade will no longer be deleted when running this. However, opening Badge Arcade will still remove your custom badges.
 
-Prebuilt download: **https://dl.dropboxusercontent.com/u/183608682/GYTB.zip**
+Prebuilt download: **[GYTB.zip](https://dl.dropboxusercontent.com/u/183608682/GYTB.zip)**
