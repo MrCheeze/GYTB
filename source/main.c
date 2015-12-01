@@ -479,7 +479,7 @@ int main() {
 	ret = dumpPrexistingBadges();
 	if (ret == 0) {
 		print2("Successfully!\n");
-	} else if (ret == -1) {
+	} else if (ret == -1 || ret == 0xC8804470) {
 		print2("No official badges to dump.\n");
 	} else if (ret == 0xC92044E6) {
 		print2("-------------------------------------\nBadge file in use. Try loading all\nbadges in your badge case and waiting\nbefore launching.\n-------------------------------------\n");
