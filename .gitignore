@@ -1,6 +1,8 @@
 *.3dsx
 *.elf
 *.smdh
+*.3ds
+*.cia
 Thumbs.db
 build/
 update_download.bat
