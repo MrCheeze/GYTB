@@ -462,13 +462,13 @@ int main() {
 	
 	setupExtdata();
 	
-    u32 nnidNum = 0;
+    u32 nnidNum = 0xFFFFFFFF;
     ret = actInit();
     ret = ACTU_Initialize(0xB0002C8, 0, 0);
     ret = ACTU_GetAccountDataBlock(0xFE, 4, 12, &nnidNum);
     ret = actExit();
 
-	if (nnidNum) {
+	if (nnidNum != 0xFFFFFFFF) {
 		print2("nnid: %08x\n", (int) nnidNum);
 	} else {
 		print2("error, could not detect NNID!\n");
