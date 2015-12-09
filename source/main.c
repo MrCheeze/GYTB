@@ -452,6 +452,28 @@ int writeToExtdata(int nnidNum) {
 	return ret;
 }
 
+void deleteBadgeExtdata() {
+	print2("Secret code L+R+X+Y to delete badge\nextdata was entered. Are you sure?\nA=YES B=NO\n");
+	
+	while(aptMainLoop()) {
+		gspWaitForVBlank();
+		hidScanInput();
+		u32 kDown = hidKeysDown();
+		if (kDown == KEY_B) break;
+		
+		if (kDown == KEY_A) {
+			print2("Deleting all badge extdata...\n");
+			Result ret = DeleteExtSaveData(0x14d1);
+			if (ret==0) {
+				print2("Deleted.\n");
+			} else {
+				print2("Not deleted! %08x\n");
+			}
+			break;
+		}
+	}
+}
+
 int main() {
 
 	gfxInitDefault();
@@ -459,6 +481,14 @@ int main() {
 	consoleInit(GFX_BOTTOM, NULL);
 	srand(time(NULL));
 	Result ret;
+	
+	hidScanInput();
+	u32 kDown = hidKeysDown();
+	
+	if (kDown == (KEY_L | KEY_R | KEY_X | KEY_Y)) {
+		deleteBadgeExtdata();
+		goto end;
+	}
 	
 	setupExtdata();
 	
@@ -491,7 +521,7 @@ int main() {
 		goto end;
 	}
 	
-	print2("Writing to extdata...");
+	print2("Writing to extdata...\n");
 	ret = writeToExtdata(nnidNum);
 	if (ret == 0xC92044E6) {
 		print2("-------------------------------------\nBadge file in use. Try loading all\nbadges in your badge case and waiting\nbefore launching.\n-------------------------------------\n");
@@ -507,8 +537,16 @@ int main() {
 	
 	
 	end:
-	svcSleepThread(5000000000LL);
+	
+	print2("\nPress any button to exit.\n");
 
+	while(aptMainLoop()) {
+		gspWaitForVBlank();
+		hidScanInput();
+		kDown = hidKeysDown();
+		if (kDown !=0) break;
+	}
+	
 	gfxExit();
 	return 0;
 }
