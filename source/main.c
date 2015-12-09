@@ -432,8 +432,16 @@ int writeToExtdata(int nnidNum) {
 	memcpy(badgeMngBuffer + 0xA028 + 0x20, &total_badges, 4);
 
 	path = FS_makePath(PATH_CHAR, "/BadgeMngFile.dat");
+	FSUSER_CreateFile(NULL, extdata_archive, path, badgeMngSize);
 	
-	ret = FSUSER_CreateFile(NULL, extdata_archive, path, badgeMngSize);
+	//if badge layout data already exists, copy it.
+	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, path, FS_OPEN_READ, 0);
+	if (ret==0) {
+		FSFILE_Read(filehandle, &tmpval, 0xB2E8, badgeMngBuffer+0xB2E8, 360 * 0x18);
+		FSFILE_Close(filehandle);
+	}
+	
+	
 	ret = FSUSER_OpenFile(NULL, &filehandle, extdata_archive, path, FS_OPEN_WRITE, 0);
 	if (ret != 0) {print2("FSUSER_OpenFile failed! %08x\n", ret); goto end;}
 	ret = FSFILE_Write(filehandle, &tmpval, 0, badgeMngBuffer, badgeMngSize, FS_WRITE_FLUSH);
