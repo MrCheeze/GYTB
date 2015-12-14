@@ -5,7 +5,7 @@ Running Badge Arcade to set up the extdata is not required, so players stuck wit
 
 The custom badge's name is set to whatever the filename of the badge originally was. Everything after the first period will be ignored, so you can have multiple badges with the same name if you like. To make a badge function as a shortcut to a system application, put the [TIDLow](http://3dbrew.org/wiki/Title_list#00040010_-_System_Applications) of one in the filename, between the first and second periods.
 
-As of the latest update, official badges from the Badge Arcade will no longer be deleted when running this. However, opening Badge Arcade will still remove your custom badges.
+As of the latest update, official badges from the Badge Arcade will no longer be deleted when running this. However, opening Badge Arcade will still remove your custom badges. Please continue to create custom badges and do not distribute the official ones.
 
 Prebuilt downloads:
 * [3DSX format (Ninjhax etc.)](https://dl.dropboxusercontent.com/u/183608682/GYTB.zip)
