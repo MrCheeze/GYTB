@@ -502,12 +502,16 @@ int main() {
 	
     u32 nnidNum = 0xFFFFFFFF;
     ret = actInit();
+	if (ret) print2("actInit failed! %08x\n", ret);
     ret = ACTU_Initialize(0xB0002C8, 0, 0);
+	if (ret) print2("ACTU_Initialize failed! %08x\n", ret);
     ret = ACTU_GetAccountDataBlock(0xFE, 4, 12, &nnidNum);
+	if (ret) print2("ACTU_GetAccountDataBlock failed! %08x\n", ret);
     ret = actExit();
+	if (ret) print2("actExit failed! %08x\n", ret);
 
 	if (nnidNum != 0xFFFFFFFF) {
-		print2("nnid: %08x\n", (int) nnidNum);
+		print2("NNID found: %08X\n", (int) nnidNum);
 	} else {
 		print2("error, could not detect NNID!\n");
 		goto end;
