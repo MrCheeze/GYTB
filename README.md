@@ -10,3 +10,12 @@ As of the latest update, official badges from the Badge Arcade will no longer be
 Prebuilt downloads:
 * [3DSX format (Ninjhax etc.)](https://dl.dropboxusercontent.com/u/183608682/GYTB.zip)
 * [CIA format (for CFW)](https://dl.dropboxusercontent.com/u/183608682/GYTB_cia.zip)
+
+----
+
+## Troubleshooting
+
+* Q: Something didn't work!
+* A: Make sure your homebrew entrypoint and boot.3dsx are up to date, that the badges folder is present, and that it contains no more than 1000 badges.
+* Q: I want to go back to only official badges!
+* A: Go to the Badge Arcade help desk.
