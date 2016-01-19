@@ -19,3 +19,5 @@ Prebuilt downloads:
 * A: Make sure your homebrew entrypoint and boot.3dsx are up to date, that the badges folder is present, and that it contains no more than 1000 badges.
 * Q: I want to go back to only official badges!
 * A: Go to the Badge Arcade help desk.
+* Q: How do I group my badges into categories?
+* A: That is not possible with this tool.
