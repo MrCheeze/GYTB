@@ -39,11 +39,11 @@ int pngToRGB565(char* filename, u16* rgb_buf_64x64, u8* alpha_buf_64x64, u16* rg
 	unsigned width, height;
 	
 	ret = lodepng_decode32_file(&image, &width, &height, filename);
-	if (ret) {print2("error %u: %s\n", ret, lodepng_error_text(ret)); return ret;}
+	if (ret) {print2("error %u: %s\n", ret, lodepng_error_text(ret)); return 0;}
 	
 	if (width < 64 || height < 64 || width % 64 != 0 || width % 64 != 0 || width > 12*384  || height > 6*384) {
 		print2("Wrong image size, should be 64x64 or a multiple thereof (maximum 768x384). \n");
-		ret = -1;
+		ret = 0;
 		goto end;
 	}
 	
@@ -344,6 +344,9 @@ int writeToExtdata(int nnidNum) {
 	
 	for (i=0; i<filecount; ++i) {
 		char *utf8_name = direntries + i*256;
+		
+		if (utf8_name[0] == '\0') {continue;}
+		
 		print2("trying to read png...\n");
 		char path[0x1000];
 		sprintf(path, "badges/%s", utf8_name);
