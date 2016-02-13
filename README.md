@@ -23,3 +23,5 @@ Prebuilt downloads:
 * A: Go to the Badge Arcade help desk.
 * Q: How do I group my badges into categories?
 * A: That is not possible with this tool.
+* Q: WTF a yellow screen WTF?
+* A: On 10.4 or above, Badge Arcade has to be downloaded to be able to run this, since HANS seems to be incapable of taking over the eShop on those firmwares versions. Sorry.
