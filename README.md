@@ -7,7 +7,7 @@ The custom badge's name is set to whatever the filename of the badge originally 
 
 As of the latest update, official badges from the Badge Arcade will no longer be deleted when running this. However, opening Badge Arcade will still remove your custom badges. Please continue to create custom badges and do not distribute the official ones.
 
-On 10.4 or above, Badge Arcade has to be downloaded to be able to run this, since HANS seems to be incapable of taking over the eShop on those firmwares versions. Sorry.
+On some firmwares, Badge Arcade has to be downloaded to be able to run this, since HANS is not always capable of taking over the eShop properly. However you may find that it is unnecessary.
 
 Prebuilt downloads:
 * [3DSX format (Ninjhax etc.)](https://dl.dropboxusercontent.com/u/183608682/GYTB.zip)
@@ -24,4 +24,4 @@ Prebuilt downloads:
 * Q: How do I group my badges into categories?
 * A: That is not possible with this tool.
 * Q: WTF a yellow screen WTF?
-* A: On 10.4 or above, Badge Arcade has to be downloaded to be able to run this, since HANS seems to be incapable of taking over the eShop on those firmwares versions. Sorry.
+* A: Try downloading Badge Arcade and running the program again.
