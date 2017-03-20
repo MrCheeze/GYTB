@@ -10,8 +10,8 @@ As of the latest update, official badges from the Badge Arcade will no longer be
 On some firmwares, Badge Arcade has to be downloaded to be able to run this, since HANS is not always capable of taking over the eShop properly. However you may find that it is unnecessary.
 
 Prebuilt downloads:
-* [3DSX format (Ninjhax etc.)](https://dl.dropboxusercontent.com/u/183608682/GYTB.zip)
-* [CIA format (for CFW)](https://dl.dropboxusercontent.com/u/183608682/GYTB_cia.zip)
+* [3DSX format (Ninjhax etc.)](https://www.dropbox.com/s/6dztbbwuyno173t/GYTB.zip?dl=0)
+* [CIA format (for CFW)](https://www.dropbox.com/s/qwd143416psttp2/GYTB_cia.zip?dl=0)
 
 ----
 
